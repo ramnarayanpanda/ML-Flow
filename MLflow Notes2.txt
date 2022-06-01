@@ -1,0 +1,205 @@
+1> How autolog works.
+    client = mlflow.tracking.MlflowClient()
+    data = client.get_run(run_id).data
+	
+	
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	print(type(data), type(data.tags), data.tags.items())
+	
+	output:
+	<class 'mlflow.entities.run_data.RunData'> 
+	<class 'dict'> 
+	dict_items([('estimator_class', 'sklearn.model_selection._search.GridSearchCV'), 
+	            ('estimator_name', 'GridSearchCV'), 
+				('mlflow.log-model.history', 
+				'[
+				  {"run_id": "a5b3e13135d14984b5d10a6ca1b20d66", 
+				   "artifact_path": "model", 
+				   "utc_time_created": "2022-03-28 13:30:44.104344", 
+				   "flavors": {"python_function": {"model_path": "model.pkl", "loader_module": "mlflow.sklearn", "python_version": "3.8.12", "env": "conda.yaml"}, 
+				               "sklearn": {"pickled_model": "model.pkl", "sklearn_version": "1.0.2", "serialization_format": "cloudpickle"}},   
+					"model_uuid": "d34a76f8ae53430298633609c3bbc672", 
+					"signature": {"inputs": "[{\\"type\\": \\"tensor\\", \\"tensor-spec\\": {\\"dtype\\": \\"float64\\", \\"shape\\": [-1, 4]}}]", 
+					              "outputs": "[{\\"type\\": \\"tensor\\", \\"tensor-spec\\": {\\"dtype\\": \\"int32\\", \\"shape\\": [-1]}}]"}}, 
+					
+				  {"run_id": "a5b3e13135d14984b5d10a6ca1b20d66", 
+				   "artifact_path": "best_estimator", 
+				   "utc_time_created": "2022-03-28 13:30:52.410605", 
+				   "flavors": {"python_function": {"model_path": "model.pkl", "loader_module": "mlflow.sklearn", "python_version": "3.8.12", "env": "conda.yaml"}, 
+				               "sklearn": {"pickled_model": "model.pkl", "sklearn_version": "1.0.2", "serialization_format": "cloudpickle"}}, 							   
+					"model_uuid": "978efe641c2345bdbe98388de9ce48f", 
+					"signature": {"inputs": "[{\\"type\\": \\"tensor\\", \\"tensor-spec\\": {\\"dtype\\": \\"float64\\", \\"shape\\": [-1, 4]}}]", 
+					              "outputs": "[{\\"type\\": \\"tensor\\", \\"tensor-spec\\": {\\"dtype\\": \\"int32\\", \\"shape\\": [-1]}}]"}}
+								  
+				 ]'
+				), 
+					
+					
+				('mlflow.source.git.commit', '2e175e7fd65d86d12d204b648aa5ff73063a7dc9'), 
+				('mlflow.source.name', 'C:/Pycharm_Projects/MLflow_clone/mlflow/examples/sklearn_autolog/grid_search_cv.py'), 
+				('mlflow.source.type', 'LOCAL'), 
+				('mlflow.user', 'Ram.Panda')])
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------			
+				
+
+
+
+
+------------------------------------------------------------------------------------------
+# Remember this is for GridSearchCV, Here you can see we have 2 artifacts generated in tags 
+data = client.get_run(run_id).data
+print(data)
+
+output:
+metrics={'best_cv_score': 0.9800000000000001,
+ 'training_accuracy_score': 0.9933333333333333,
+ 'training_f1_score': 0.9933326665999933,
+ 'training_precision_score': 0.9934640522875816,
+ 'training_recall_score': 0.9933333333333333,
+ 'training_score': 0.9933333333333333}, 
+ 
+params={'best_C': '1',
+ 'best_kernel': 'linear',
+ 'cv': 'None',
+ 'error_score': 'nan',
+ 'estimator': 'SVC()',
+ 'n_jobs': 'None',
+ 'param_grid': "{'kernel': ('linear', 'rbf'), 'C': [1, 10]}",
+ 'pre_dispatch': '2*n_jobs',
+ 'refit': 'True',
+ 'return_train_score': 'False',
+ 'scoring': 'None',
+ 'verbose': '0'}, 
+ 
+tags={'estimator_class': 'sklearn.model_selection._search.GridSearchCV',
+ 'estimator_name': 'GridSearchCV',
+ 'mlflow.log-model.history': '[{"run_id": "c0f58808c2f44d1c87b1be460a03cd50", '
+                             '"artifact_path": "model", "utc_time_created": '
+                             '"2022-03-28 19:04:42.951441", "flavors": '
+                             '{"python_function": {"model_path": "model.pkl", '
+                             '"loader_module": "mlflow.sklearn", '
+                             '"python_version": "3.8.12", "env": '
+                             '"conda.yaml"}, "sklearn": {"pickled_model": '
+                             '"model.pkl", "sklearn_version": "1.0.2", '
+                             '"serialization_format": "cloudpickle"}}, '
+                             '"model_uuid": '
+                             '"8a8d4dc8608f4b508157df8f6a8c0995", "signature": '
+                             '{"inputs": "[{\\"type\\": \\"tensor\\", '
+                             '\\"tensor-spec\\": {\\"dtype\\": \\"float64\\", '
+                             '\\"shape\\": [-1, 4]}}]", "outputs": '
+                             '"[{\\"type\\": \\"tensor\\", \\"tensor-spec\\": '
+                             '{\\"dtype\\": \\"int32\\", \\"shape\\": '
+                             '[-1]}}]"}}, {"run_id": '
+                             '"c0f58808c2f44d1c87b1be460a03cd50", '
+                             '"artifact_path": "best_estimator", '
+                             '"utc_time_created": "2022-03-28 '
+                             '19:04:47.658663", "flavors": {"python_function": '
+                             '{"model_path": "model.pkl", "loader_module": '
+                             '"mlflow.sklearn", "python_version": "3.8.12", '
+                             '"env": "conda.yaml"}, "sklearn": '
+                             '{"pickled_model": "model.pkl", '
+                             '"sklearn_version": "1.0.2", '
+                             '"serialization_format": "cloudpickle"}}, '
+                             '"model_uuid": '
+                             '"fe621f8c401144c9b474a55d6b1b3223", "signature": '
+                             '{"inputs": "[{\\"type\\": \\"tensor\\", '
+                             '\\"tensor-spec\\": {\\"dtype\\": \\"float64\\", '
+                             '\\"shape\\": [-1, 4]}}]", "outputs": '
+                             '"[{\\"type\\": \\"tensor\\", \\"tensor-spec\\": '
+                             '{\\"dtype\\": \\"int32\\", \\"shape\\": '
+                             '[-1]}}]"}}]',
+ 'mlflow.source.git.commit': '2e175e7fd65d86d12d204b648aa5ff73063a7dc9',
+ 'mlflow.source.name': 'C:/Pycharm_Projects/MLflow_clone/mlflow/examples/sklearn_autolog/grid_search_cv.py',
+ 'mlflow.source.type': 'LOCAL',
+ 'mlflow.user': 'Ram.Panda'}>
+---------------------------------------------------------------------------------------------------------------
+
+
+
+
+
+---------------------------------------------------------------------------------
+for item in client.list_artifacts(run_id):
+    print(item)
+	
+output:
+<FileInfo: file_size=None, is_dir=True, path='best_estimator'>
+<FileInfo: file_size=1146, is_dir=False, path='cv_results.csv'>
+<FileInfo: file_size=None, is_dir=True, path='model'>
+<FileInfo: file_size=62061, is_dir=False, path='training_confusion_matrix.png'>
+---------------------------------------------------------------------------------
+
+ 
+ 
+
+
+--------------------------------------------------------------------------------
+def yield_artifacts(run_id, path=None):
+    """Yield all artifacts in the specified run"""
+    client = mlflow.tracking.MlflowClient()
+    for item in client.list_artifacts(run_id, path):
+        if item.is_dir:
+            yield from yield_artifacts(run_id, item.path)
+        else:
+            yield item.path
+	
+output:	
+  ['best_estimator/MLmodel', 
+   'best_estimator/conda.yaml', 
+   'best_estimator/model.pkl', 
+   'best_estimator/requirements.txt', 
+   'cv_results.csv', 
+   'model/MLmodel', 
+   'model/conda.yaml', 
+   'model/model.pkl', 
+   'model/requirements.txt', 
+   'training_confusion_matrix.png']
+-------------------------------------------------------------------------------
+
+
+
+
+
+
+------------------------------------------------------------------------------------------------------------
+with mlflow.start_run() as run:
+    clf.fit(iris.data, iris.target)
+	
+if the clf is GridSearchCV then  print(run.info.run_id): Will return the id of the run with best hyperparams
+id is just the file number which will contain the artifacts of the best estimator 
+------------------------------------------------------------------------------------------------------------
+
+
+
+
+
+-------------------------------------------------------------------------------------------------------------
+filter_child_runs = "tags.mlflow.parentRunId = '451720b668664f09a544517f6bcd727e' "    # Here the id is the id of the best parameter artifact  
+runs = mlflow.search_runs(filter_string=filter_child_runs)
+print(type(runs))
+
+output:
+dataframe
+
+This runs contain all the info about start_time, end_time, metric, hyperparams the estimators of the GridSearchCV.
+If the filter_String on child runs is not applied then you will get some more columns along with the columns mentioned above.
+These extra columns is for the run_id which will store the best_params result. 
+-------------------------------------------------------------------------------------------------------------
+
+
+
+
+
+
+
+python mnist_autolog_example2.py --max_epochs 5 --gpus 1  --accelerator "ddp"  --batch_size 64  --num_workers 3  --lr 0.001
+
+
+ll/index.html. You can also configure MLflow to look for a specific Conda executable by setting the MLFLOW_CONDA_HOME environment variable to the path of the Conda executable === 
+PS C:\Pycharm_Projects\MLflow_clone\mlflow\examples\pytorch\MNISTNew\example2> 
+
+
+
+
+
+

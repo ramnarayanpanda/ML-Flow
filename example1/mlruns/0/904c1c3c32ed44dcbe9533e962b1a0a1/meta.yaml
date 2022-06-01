@@ -1,0 +1,15 @@
+artifact_uri: file:///C:/Users/Ram.Panda/Desktop/ML%20Flow/example1/mlruns/0/904c1c3c32ed44dcbe9533e962b1a0a1/artifacts
+end_time: 1654072947648
+entry_point_name: ''
+experiment_id: '0'
+lifecycle_stage: active
+name: ''
+run_id: 904c1c3c32ed44dcbe9533e962b1a0a1
+run_uuid: 904c1c3c32ed44dcbe9533e962b1a0a1
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1654072944149
+status: 3
+tags: []
+user_id: Ram.Panda

@@ -1,0 +1,691 @@
+Machine learning workflow:
+i>   It’s difficult to keep track of experiments.
+ii>  Difficult to reproduce code: Need to track parameters, version, dependencies. Challegning for other code users.
+iii> No standard way to package and deploy models: You have to comeup with your own way of capturing results. This way the linkbet model, code, param gets lost.
+iv>  There’s no central store to manage models (their versions and stage transitions): Problem with managing lifecycle, stages.
+
+MLflow lets you train, reuse, deploy models with any library and pacakge them into reproducible steps that other data scientists can use as a 
+"black box" with out even knowing what's there in the code.
+
+
+
+Mlflow provides 4 compnonets to manage workflows.
+i>   MLflow Tracking: API and UI for logging params, code versions, metrics and artifacts when running your ML code and for later visualizing the result.
+     ---------------  You can use tracking in any env (eg: standalone script, notebook) to log results to local files or to a server, then compare multiple runs.
+	                  Across teams also an use it to compare results.
+					 
+ii>  MLflow Projects: standard format for packaging reusable code. 
+     ---------------  Each project is simply a directory with code or a Git repository, and uses a descriptor file or simply convention 
+	                  to specify its dependencies and how to run the code. For eg: conda.yaml file contains info about conda env. 
+					  When you use the MLflow Tracking API in a Project, MLflow automatically remembers the project version (for example, Git commit) and any parameters. 
+					  You can easily run existing MLflow Projects from GitHub or your own Git repository, and chain them into multi-step workflows.
+					  
+iii> MLflow Models: Offers a convention for packaging machine learning models in multiple flavors, and a variety of tools to help you deploy them.
+     -------------  Each Model is saved as a directory containing arbitrary files and a descriptor file that lists several “flavors” the model can be used in.
+	                For example, a TensorFlow model can be loaded as a TensorFlow DAG, or as a Python function to apply to input data.
+					MLflow provides tools to deploy many common model types to diverse platforms. 
+					Eg: any model supporting the “Python function” flavor can be deployed to a Docker-based REST server,
+					to cloud platforms such as Azure ML and AWS SageMaker, and as a user-defined function in Apache Spark for batch and streaming inference.
+					If you output MLflow Models using the Tracking API, MLflow also automatically remembers which Project and run they came from.
+					
+iv>  MLflow Registry: Offers a centralized model store, set of APIs, and UI, to collaboratively manage the full lifecycle of an MLflow Model. 
+     ---------------  It provides model lineage (which MLflow experiment and run produced the model), model versioning, 
+	                  stage transitions (for example from staging to production or archiving), and annotations.
+
+
+
+Referencing Artifacts:
+Referencing depends on whether you are invoking Tracking, Model, Projects API.
+For Tracking API specify the artifacts location using RunID, relative path. Syntax: mlflow.log_artifacts("<mlflow_run_id>", "/path/to/artifact")
+For Models & Projects API specify the complete location of artifacts.       Syntax: mlflow.pytorch.log_model("runs:/<mlflow_run_id>/run-relative/path/to/model", registered_model_name="mymodel")
+                                                                                    mlflow.pytorch.load_model("models:/mymodel/1")
+
+
+
+Scalability and Big Data:
+MLflow is designed to scale to large datasets, output files. It supports scaling in 4 dimensions.
+i>   An individual MLflow run can execute on a distributed cluster, for example, using Apache Spark.
+     You can launch runs on any distrubuted infra of your choice and report results to Tracking server to compare them.
+	 MLflow provides built in APIs to launch runs Databricks notebook.
+	 
+ii>  MLflow supports launching multiple runs in parallel with different parameters. 
+     For example, for hyperparameter tuning. You can simply use the Projects API to start multiple runs and the Tracking API to track them.
+	 
+iii> MLflow Projects can take input from, and write output to, distributed storage systems such as AWS S3 and DBFS. 
+     MLflow can automatically download such files locally for projects that can only run on local files, or give the project a distributed storage URI if it supports that. 
+	 This means that you can write projects that build large datasets, such as featurizing a 100 TB file.
+	 
+iv>  MLflow Model Registry offers large organizations a central hub to collaboratively manage a complete model lifecycle. 
+     Many data science teams within an organization develop hundreds of models, each model with its experiments, runs, versions, artifacts, and stage transitions. 
+	 A central registry facilitates model discovery and model’s purpose across multiple teams in a large organization.
+
+
+
+Example Usecases:
+i>   As an individual you can track experminets on your machine, organizing code for future use, 
+     then deploy models that production engineers can deploy using MLflow's deployment tools. 
+	 
+ii>  Datascience teams can deploy an MLflow Tracking server to log and compare results across multiple users. 
+     For this everyone can name their params, metrics with some prefix to see whose result has more accuracy and also wil lbe able to tackle new data.
+	 
+iii> Large orgs can run any other teams code as MLflow can pacakge useful code and data preparation steps. Engineers can easily move workflows to diff stages.
+
+iv>  Production Engineers can deploy models from diverse ML libraries in the same way, 
+     store the models as files in a management system of their choice, and track which run a model came from.
+
+v>   ML Library Developers can output models in the MLflow Model format to have them automatically support deployment using MLflow’s built-in tools. 
+     In addition, deployment tool developers (for example, a cloud vendor building a serving platform) can automatically support a large variety of models.
+	 
+
+
+
+
+
+
+
+
+
+--------------------------------MLflow Tracking---------------------------------
+Tracking API stores the below:
+Code version: Git commit hash used for the run, if it was run from an MLflow Project.
+Start & End time:
+Source: Name of the file to launch the run, or the project name and entry point for the run if run from an MLflow Project.
+Params: Key-value input parameters of your choice. Both keys and values are strings.
+Metrics: Key-value metrics, where the value is numeric. Each metric can be updated throughout the course of the run 
+         (for example, to track how your model’s loss function is converging), and MLflow records and lets you visualize the metric’s full history.
+Artifacts: Output files in any format. For example, you can record images (for example, PNGs), models (for example, a pickled scikit-learn model), 
+           and data files (for example, a Parquet file) as artifacts.
+		   
+		   
+		   
+Note: If you record runs in an MLflow Project, MLflow remembers the project URI and source version.
+      You can optionally organize runs into experiments, which group together runs for a specific task. 
+	  You can create an experiment using the mlflow experiments CLI, with mlflow.create_experiment(), or using the corresponding REST parameters. 
+	  The MLflow API and UI let you create and search for experiments.
+	  Once your runs have been recorded, you can query them using the Tracking UI or the MLflow API.
+
+
+
+Where Runs are recorded:
+By default MLflow records the runs into local folder "mlruns". You can also use SQLAlchemy compatible databases.
+To log runs remotely, set the MLFLOW_TRACKING_URI environment variable to a tracking server’s URI or call mlflow.set_tracking_uri().
+Different kinds of remote tracking servers.
+i>   Local file path 
+ii>  Database encoded as <dialect>+<driver>://<username>:<password>@<host>:<port>/<database>. Databases are mysql, mssql, sqlite.
+iii> HTTP server (specified as https://my-server:5000), which is a server hosting an MLflow tracking server.
+iv>  Databricks workspace (specified as databricks or as databricks://<profileName>, a Databricks CLI profile.
+
+
+
+How Runs and Artifacts are Recorded:
+For storing runs / MLflow entities (runs, parameters, metrics, tags, notes, metadata, etc) and artifacts(files, models, images, in-memory objects, or model summary, etc)
+MLflow uses backend store and artifact store respectively.
+
+If you start an Artifact server by mentioning "--artifacts-only" then you will not be able to create runs, log metrics, accessing other attributes. 
+You can only save, load, list artifacts.
+
+
+
+---------------Logging Data to Runs
+-> mlflow.set_tracking_uri(): connects to a tracking URI. You can also set the MLFLOW_TRACKING_URI environment variable to have MLflow find a URI from there. 
+                              In both cases, the URI can either be a HTTP/HTTPS URI for a remote server, a database connection string, or a local path to log data to a directory. 
+							  The URI defaults to mlruns.
+							  
+-> mlflow.tracking.get_tracking_uri(): returns the current tracking URI.
+
+-> mlflow.create_experiment(): creates a new experiment and returns its ID. Runs can be launched under the experiment by passing the experiment ID to mlflow.start_run.
+
+-> mlflow.set_experiment(): sets an experiment as active. If the experiment does not exist, creates a new experiment. 
+                            If you do not specify an experiment in mlflow.start_run(), new runs are launched under this experiment.
+							
+-> mlflow.start_run(): returns the currently active run (if one exists), or starts a new run and returns a mlflow.ActiveRun object usable as a context manager for the current run. 
+                       You do not need to call start_run explicitly: calling one of the logging functions with no active run automatically starts a new one.
+					   
+-> mlflow.end_run(): ends the currently active run, if any, taking an optional run status.
+
+-> mlflow.active_run(): returns a mlflow.entities.Run object corresponding to the currently active run, if any. 
+                        Note: You cannot access currently-active run attributes (parameters, metrics, etc.) through the run returned by mlflow.active_run. 
+						In order to access such attributes, use the mlflow.tracking.MlflowClient as follows:
+						
+						client = mlflow.tracking.MlflowClient()
+						data = client.get_run(mlflow.active_run().info.run_id).data
+						
+-> mlflow.log_param[S](): logs a single key-value param in the currently active run. The key and value are both strings. Use mlflow.log_params() to log multiple params at once.
+
+-> mlflow.log_metric[S](): logs a single key-value metric. The value must always be a number. MLflow remembers the history of values for each metric. 
+                           Use mlflow.log_metrics() to log multiple metrics at once.
+
+-> mlflow.set_tag[S](): sets a single key-value tag in the currently active run. The key and value are both strings. Use mlflow.set_tags() to set multiple tags at once.
+
+-> mlflow.log_artifact(): logs a local file or directory as an artifact, optionally taking an artifact_path to place it in within the run’s artifact URI. 
+                          Run artifacts can be organized into directories, so you can place the artifact in a directory this way.
+						  
+-> mlflow.log_artifacts(): logs all the files in a given directory as artifacts, again taking an optional artifact_path.
+
+-> mlflow.get_artifact_uri(): returns the URI that artifacts from the current run should be logged to.
+
+
+
+
+Launching Multiple Runs in One Program:
+If you want to hyperparam tuning then you will have to run multiple MLflow runs in the same program. 
+This is easy to do because the ActiveRun object returned by mlflow.start_run() is a Python context manager. You can “scope” each run to just one block of code as follows:
+with mlflow.start_run():
+    #block1
+    mlflow.log_param("x", 1)
+    mlflow.log_metric("y", 2)
+	
+	#block2
+    mlflow.log_param("x1", 1)
+    mlflow.log_metric("y1", 2)    
+
+
+
+Performance Tracking with Metrics:
+You log MLflow metrics with log methods in the Tracking API. The log methods support two alternative methods for distinguishing metric values on the x-axis: timestamp and step.
+Timestamp: Represents the time that the metric was logged.
+Steps: step is an optional integer that represents any measurement of training progress (number of training iterations, number of epochs, and so on). Steps defaul to 0.
+       Steps have the below properties.
+	   a> Must be a valid 64-bit integer value.
+	   b> Can be negative.
+	   c> Can be out of order in successive write calls. For example, (1, 3, 2) is a valid sequence.
+	   d> Can have “gaps” in the sequence of values specified in successive write calls. For example, (1, 5, 75, -20) is a valid sequence.
+	   
+	   eg: with mlflow.start_run():
+               for epoch in range(0, 3):
+                   mlflow.log_metric(key="quality", value=2*epoch, step=epoch)
+				   
+				   
+
+
+
+				   
+Automatic Logging:
+Automatic logging allows you to log metrics, parameters, and models without the need for explicit log statements. 2 ways of auto logging.
+a> Call mlflow.autolog() before your training code. This will enable autologging for each supported library you have installed as soon as you import it.
+b> Use library-specific autolog calls for each library you use in your code. See below for examples.
+# See the examples for pytorch, keras, sklearn
+
+
+
+
+
+
+
+Organizing Runs in Experiments:
+MLflow allows you to group runs under experiments, which can be useful for comparing runs intended to tackle a particular task.
+Syntax Python: mlflow.create_experiment()
+Syntax CLI:    mlflow experiments()
+You can pass the experiment name for an individual run using the CLI (for example, mlflow run ... --experiment-name [name]) or the MLFLOW_EXPERIMENT_NAME environment variable. 
+Alternatively, you can use the experiment ID instead, via the --experiment-id CLI flag or the MLFLOW_EXPERIMENT_ID environment variable.
+
+# Set the experiment via environment variables
+export MLFLOW_EXPERIMENT_NAME=fraud-detection
+mlflow experiments create --experiment-name fraud-detection
+
+# Launch a run. The experiment is inferred from the MLFLOW_EXPERIMENT_NAME environment
+# variable, or from the --experiment-name parameter passed to the MLflow CLI (the latter
+# taking precedence)
+with mlflow.start_run():
+    mlflow.log_param("a", 1)
+    mlflow.log_metric("b", 2)
+
+
+Managing Experiments and Runs with the Tracking Service API:
+MLflow provides a more detailed Tracking Service API for managing experiments and runs directly, which is available through client SDK in the mlflow.tracking module. 
+This makes it possible to query data about past runs, log additional information about them, create experiments, add tags to a run, and more.
+
+# Example 
+from  mlflow.tracking import MlflowClient
+client = MlflowClient()
+experiments = client.list_experiments() # returns a list of mlflow.entities.Experiment
+run = client.create_run(experiments[0].experiment_id) # returns mlflow.entities.Run
+client.log_param(run.info.run_id, "hello", "world")
+client.set_terminated(run.info.run_id)
+
+
+Adding Tags to Runs:
+The below adds tags to runs. A tag can only have a single unique value mapped to it at a time.
+client.set_tag(run.info.run_id, "tag_key", "tag_value")
+
+
+
+
+
+Tracking UI:
+UI contains below features.
+i>   Experiment-based run listing and comparison
+ii>  Searching for runs by parameter or metric value
+iii> Visualizing run metrics
+iv>  Downloading run results
+
+
+
+
+Querying Runs Programmatically:
+You can access all of the functions in the Tracking UI programmatically. This makes it easy to do several common tasks:
+i>   Query and compare runs using any data analysis tool of your choice, for example, pandas.
+ii>  Determine the artifact URI for a run to feed some of its artifacts into a new run when executing a workflow. 
+     For an example of querying runs and constructing a multistep workflow, see the MLflow Multistep Workflow Example project.
+iii> Load artifacts from past runs as MLflow Models. For an example of training, exporting, and loading a model, 
+     and predicting using the model, see the MLflow TensorFlow example.
+iv>  Run automated parameter search algorithms, where you query the metrics from various runs to submit new ones. 
+     For an example of running automated parameter search algorithms, see the MLflow Hyperparameter Tuning Example project.
+
+
+
+
+MLflow Tracking Servers:
+An MLflow tracking server has two components for storage: a backend store and an artifact store.
+
+Backend Store:
+The backend store is where MLflow Tracking Server stores experiment and run metadata as well as params, metrics, and tags for runs. 
+MLflow supports two types of backend stores: file store and database-backed store.
+
+Artifact Stores: 
+eg: Azure Blob Storage
+The artifact store is a location suitable for large data (such as an S3 bucket or shared NFS file system) and is where clients log their artifact output (for example, models). 
+artifact_location is a property recorded on mlflow.entities.Experiment for default location to store artifacts for all runs in this experiment. 
+Additional, artifact_uri is a property on mlflow.entities.RunInfo to indicate location where all artifacts for this run are stored.
+
+
+
+
+
+
+
+
+
+
+
+
+
+-------------------------------------------MLflow Projects-----------------------------------------------
+An MLflow Project is a format for packaging data science code in a reusable and reproducible way, based primarily on conventions. 
+In addition, the Projects component includes an API and command-line tools for running projects, making it possible to chain together projects into workflows.
+It is just a way of organizing files in a repository / in Git, which lets other people to read and execute code easily.
+
+You can run any project from a Git URI or from a local directory using the mlflow run command-line tool, or the mlflow.projects.run() Python API.
+
+MLproject file is not necessary to be present. But in helps by providing additional control over project's attributes.
+Finally, MLflow projects allow you to specify the software environment that is used to execute project entry points.
+
+Each project can specify several properties:
+i>   Name: Human readable name for the project.
+ii>  Entry Points: Commands that can run with in the project and info about their params. 
+                   Most projects contain at least one entry point that you want other users to call. 
+				   Some projects can also contain more than one entry point, eg: you might have a single Git repository containing multiple featurization algorithms. 
+iii> Environment: The software environment that should be used to execute project entry points.
+                  This includes all library dependencies required by the project code.
+				  
+				  
+Project Environments:
+i>   Conda: When an MLflow Project specifies a Conda environment, it is activated before project code is run.
+            By default, MLflow uses the system path to find and run the conda binary. 
+			You can use a different Conda installation by setting the MLFLOW_CONDA_HOME environment variable.
+			In this case, MLflow attempts to run the binary at $MLFLOW_CONDA_HOME/bin/conda.
+			
+			You can also specify a Conda environment for your MLflow project by including a conda.yaml file in the root of the project directory 
+			or by including a conda_env entry in your MLproject file.
+			
+ii>  Docker: See the doc for this.
+
+
+
+
+Project Directories:
+When running an MLflow Project directory or repository that does not contain an MLproject file, MLflow uses the following conventions to determine the project’s attributes:	
+i>   The project’s name is the name of the directory.
+ii>  The Conda environment is specified in conda.yaml, if present. If no conda.yaml file is present, 
+     MLflow uses a Conda environment containing only Python (specifically, the latest Python available to Conda) when running the project.		
+iii> Any .py and .sh file in the project can be an entry point. MLflow uses Python to execute entry points with the .py extension, 
+     and it uses bash to execute entry points with the .sh extension.	
+iv>  By default, entry points do not have any parameters when an MLproject file is not included.
+     Parameters can be supplied at runtime via the mlflow run CLI or the mlflow.projects.run() Python API. 
+	 Runtime parameters are passed to the entry point on the command line using --key value syntax. 
+	 
+	 
+eg of MLproject file:
+
+name: My Project
+
+conda_env: my_env.yaml
+# Can have a docker_env instead of a conda_env, e.g.
+# docker_env:
+#    image:  mlflow-docker-example
+
+entry_points:
+  main:
+    parameters:
+      data_file: path
+      regularization: {type: float, default: 0.1}
+    command: "python train.py -r {regularization} {data_file}"
+  validate:
+    parameters:
+      data_file: path
+    command: "python validate.py {data_file}"
+
+
+
+Command Syntax:
+When specifying an entry point in an MLproject file, the command can be any string in Python format string syntax. 
+All of the parameters declared in the entry point’s parameters field are passed into this string for substitution.
+Note:  If you call the project with additional parameters not listed in the parameters field, MLflow passes them using --key value syntax, 
+       so you can use the MLproject file to declare types and defaults for just a subset of your parameters.
+	   
+	   Dont know what this means, may be while running using CLI you dont need to put "" in case of strings. But need to check.
+	   Before substituting parameters in the command, MLflow escapes them using the Python shlex.quote function, 
+	   so you don’t need to worry about adding quotes inside your command field.
+
+
+
+Specifying Parameters:
+MLflow allows specifying a data type and default value for each parameter. 
+You can specify just the data type by writing:  parameter_name: data_type
+OR add a default value as well using one of the following syntaxes
+parameter_name: {type: data_type, default: value}  # Short syntax
+
+MLflow supports four parameter types, some of which it treats specially (for example, downloading data to local files). 
+Any undeclared parameters are treated as string. The parameter types are:
+string
+float
+path: A path on the local file system. MLflow converts any relative path parameters to absolute paths.
+      MLflow also downloads any paths passed as distributed storage URIs (s3://, dbfs://, gs://, etc.) to local files. 
+	  Use this type for programs that can only read local files.
+uri: A URI for data either in a local or distributed storage system. MLflow converts relative paths to absolute paths, as in the path type. 
+     Use this type for programs that know how to read from distributed storage (e.g., programs that use Spark).
+
+
+
+
+Running Projects:
+MLflow provides two ways to run projects: the mlflow run command-line tool, or the mlflow.projects.run() Python API. Both tools take the following parameters:
+Project URI,
+Project Version,
+Entry Point,
+Parameters,
+Deployment Mode: Using this we can pass the clusters types that we want to create in Databricks, so it will be like running the job remotely, Check docs for more info.
+Environment 
+
+There are also additional options for disabling the creation of a Conda environment, which can be useful if you quickly want to test a project in your existing shell environment.
+
+
+
+
+Building Multistep Workflows:
+The mlflow.projects.run() API, combined with mlflow.tracking, makes it possible to build multi-step workflows with separate projects 
+(or entry points in the same project) as the individual steps.
+Each call to mlflow.projects.run() returns a run object, that you can use with mlflow.tracking to determine when the run has ended and get its output artifacts. 
+These artifacts can then be passed into another step that takes path or uri parameters. 
+You can coordinate all of the workflow in a single Python program that looks at the results of each step and decides what to submit next using custom code. 
+Some example use cases for multi-step workflows include:
+i>   Modularizing Your Data Science Code:   Different users can publish reusable steps for data featurization, training, validation, and so on, 
+                                            that other users or team can run in their workflows. 
+											Because MLflow supports Git versioning, another team can lock their workflow to a specific version of a project, 
+											or upgrade to a new one on their own schedule.
+ii>  Hyperparameter Tuning:   Using mlflow.projects.run() you can launch multiple runs in parallel either on the local machine or on a cloud platform like Databricks. 
+                              Your driver program can then inspect the metrics from each run in real time to cancel runs, launch new ones, 
+							  or select the best performing run on a target metric.
+iii> Cross-validation:  Sometimes you want to run the same training code on different random splits of training and validation data. 
+                        With MLflow Projects, you can package the project in a way that allows this, 
+						for example, by taking a random seed for the train/validation split as a parameter, 
+						or by calling another project first that can split the input data.	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+---------------------------------------------MLflow Models-------------------------------------------------
+An MLflow Model is a standard format for packaging machine learning models that can be used in a variety of downstream tools—for example, 
+real-time serving through a REST API or batch inference on Apache Spark. 
+The format defines a convention that lets you save a model in different “flavors” that can be understood by different downstream tools.	
+
+
+Each MLflow Model is a directory containing arbitrary files, together with an MLmodel file in the root of the directory 
+that can define multiple FLAVOURS that the model can be viewed in.		
+
+Flavours: They are conventions that deployment tools can use to understand the model. 
+          which makes it possible to write tools that work with models from any ML library without having to integrate each tool with each library.
+		  
+          MLflow defines several “standard” flavors that all of its built-in deployment tools support, 
+		  such as a “Python function” flavor that describes how to run the model as a Python function.	
+
+          However, libraries can also define and use other flavors. For example, MLflow’s mlflow.sklearn library allows loading models back as a scikit-learn Pipeline 
+		  object for use in code that is aware of scikit-learn, or as a generic Python function for use in tools that just need to apply the model 
+		  (for example, the mlflow sagemaker tool for deploying models to Amazon SageMaker).
+
+          All of the flavors that a particular model supports are defined in its MLmodel file in YAML format. For example, mlflow.sklearn outputs models as follows:
+          # Directory written by mlflow.sklearn.save_model(model, "my_model")
+          my_model/
+         ├── MLmodel
+         ├── model.pkl
+         ├── conda.yaml
+         └── requirements.txt
+          Here the MLmodel file will have 2 flavours as below:
+          time_created: 2018-05-25T17:28:53.35
+          flavors:
+             sklearn:
+                sklearn_version: 0.19.1
+                pickled_model: model.pkl
+             python_function:
+                loader_module: mlflow.sklearn		
+
+          This model can then be used with any tool that supports either the sklearn or python_function model flavor. 
+		  For example, the mlflow models serve command can serve a model with the python_function or the crate (R Function) flavor:	
+          mlflow models serve -m my_model.
+
+
+The MLmodel.yaml format can store other things such as 
+time_created
+run_id
+signature
+input_example
+databricks_runtime
+
+
+Additional Logged Files:
+For environment recreation, we automatically log conda.yaml and requirements.txt files whenever a model is logged. 
+These files can then be used to reinstall dependencies using either conda or pip.
+conda.yaml: When saving a model, MLflow provides the option to pass in a conda environment parameter that can contain dependencies used by the model. 
+            If no conda environment is provided, a default environment is created based on the flavor of the model. 
+			This conda environment is then saved in conda.yaml.
+requirements.txt:  The requirements file is created from the pip portion of the conda.yaml environment specification. 
+                   Additional pip dependencies can be added to requirements.txt by including them as a pip dependency in a conda environment 
+				   and logging the model with the environment.
+				   
+				   
+
+
+
+Model Signature And Input Example:
+You can store “What inputs does it expect?” and “What output does it produce?”. 
+
+Model Signature: The Model signature defines the schema of a model’s inputs and outputs. 
+                 Model inputs and outputs can be either column-based or tensor-based. 
+				 Column-based inputs and outputs can be described as a sequence of (optionally) named columns with type specified as one of the MLflow data types. 
+				 Tensor-based inputs and outputs can be described as a sequence of (optionally) named tensors with type specified as one of the numpy data types.
+				 Model signatures are recognized and enforced by standard MLflow model deployment tools. 
+				 For example, the mlflow models serve tool, which deploys a model as a REST API, validates inputs based on the model’s signature.
+				 
+Column-based Signature Example: All flavors support column-based signatures.
+                                Eg: For Iris data you can have somthing like:
+								signature:
+								inputs: '[{"name": "sepal length (cm)", "type": "double"}, 
+								          {"name": "sepal width (cm)", "type": "double"}, 
+										  {"name": "petal length (cm)", "type": "double"}, 
+										  {"name": "petal width (cm)", "type": "double"}]'
+								outputs: '[{"type": "integer"}]'
+								
+Tensor-based Signature Example:  Only DL flavors support tensor-based signatures (i.e TensorFlow, Keras, PyTorch, Onnx, and Gluon).
+                                 signature: 
+								 inputs: '[{"name": "images", "dtype": "uint8", "shape": [-1, 28, 28, 1]}]'
+                                 outputs: '[{"shape": [-1, 10], "dtype": "float32"}]'
+
+Signature Enforcement: Schema enforcement checks the provided input against the model’s signature and raises an exception if the input is not compatible. 
+                       This enforcement is applied in MLflow before calling the underlying model implementation. 
+					   Note: This enforcement only applies when using MLflow model deployment tools or when loading models as python_function. 
+					         In particular, it is not applied to models that are loaded in their native format (e.g. by calling mlflow.sklearn.load_model()).
+							 
+Name Ordering Enforcement: The input names are checked against the model signature. 
+                           If there are any missing inputs, MLflow will raise an exception. 
+						   Extra inputs that were not declared in the signature will be ignored. 
+						   If the input schema in the signature defines input names, input matching is done by name and the inputs are reordered to match the signature. 
+						   If the input schema does not have input names, matching is done by position (i.e. MLflow will only check the number of inputs).
+						   
+Input Type Enforcement:  The input types are checked against the signature.
+                         For models with column-based signatures (i.e DataFrame inputs), MLflow will perform safe type conversions if necessary
+
+
+How To Log Models With Signatures: Check the doc page itself. It has got example of how to log Signatures. You can either infer the data type / create your custom data type.
+
+
+
+
+
+Model API:
+You can save and load MLflow Models in multiple ways. 
+i>  First, MLflow includes integrations with several common libraries. 
+    For example, mlflow.sklearn contains save_model, log_model, and load_model functions for scikit-learn models.
+ii> Second, you can use the mlflow.models.Model class to create and write models. This class has four key functions:
+    a> add_flavor: to add a flavor to the model. Each flavor has a string name and a dictionary of key-value attributes, 
+	               where the values can be any object that can be serialized to YAML.		   
+	b> save: to save the model to a local directory.
+	c> log: to log the model as an artifact in the current run using MLflow Tracking.
+	d> load: to load a model from a local directory or from an artifact in a previous run.
+
+
+
+
+Built-In Model Flavors:
+MLflow provides several standard flavors that might be useful in your applications. 
+Specifically, many of its deployment tools support these flavors, so you can export your own model in one of these flavors to benefit from all these tools.
+
+i>   Python Function: The python_function model flavor serves as a default model interface for MLflow Python models. 
+                      Any MLflow Python model is expected to be loadable as a python_function model.
+					  This enables other MLflow tools to work with any python model regardless of which persistence module or framework was used to produce the model
+					  This interoperability is very powerful because it allows any Python model to be productionized in a variety of environments.
+					  
+					  In addition, the python_function model flavor defines a generic filesystem model format for Python models 
+					  and provides utilities for saving and loading models to and from this format. 
+					  The format is self-contained in the sense that it includes all the information necessary to load and use a model.
+
+
+
+
+
+Model Evaluation:
+After building and training your MLflow Model, you can use the mlflow.evaluate() API to evaluate its performance on one or more datasets of your choosing. 
+mlflow.evaluate() currently supports evaluation of MLflow Models with the python_function (pyfunc) model flavor for classification and regression tasks, 
+computing a variety of task-specific performance metrics, model performance plots, and model explanations. Evaluation results are logged to MLflow Tracking.
+Eg:
+model = xgboost.XGBClassifier().fit(X_train, y_train)
+with mlflow.start_run() as run:
+    model_info = mlflow.sklearn.log_model(model, "model")
+    result = mlflow.evaluate(
+        model_info.model_uri,
+        eval_data,
+        targets="label",
+        model_type="classifier",
+        dataset_name="adult",
+        evaluators=["default"],
+    )
+	
+	
+
+
+
+Model Customization:
+you may want to use a model from an ML library that is not explicitly supported by MLflow’s built-in flavors. 
+Alternatively, you may want to package custom inference code and data to create an MLflow Model. 
+Fortunately, MLflow provides two solutions that can be used to accomplish these tasks: 
+Custom Python Models 
+Custom Flavors.
+
+Custom Python Models: The mlflow.pyfunc module provides save_model() and log_model() utilities for creating MLflow Models with the python_function 
+                      flavor that contain user-specified code and artifact (file) dependencies.
+					  Because these custom models contain the python_function flavor, they can be deployed to any of MLflow’s supported production environments, 
+					  such as SageMaker, AzureML, or local REST endpoints.
+					  Check the docs on how to create Custom Python Models.
+					  
+Custom Flavours: You can also create custom MLflow Models by writing a custom flavor.
+                 Flavours are the library names, in which the model can be interpreted.
+				 To create a new flavor to support a custom model, you define the set of flavor-specific attributes to include in the MLmodel configuration file, 
+				 as well as the code that can interpret the contents of the model directory and the flavor’s attributes.
+				 
+				 
+				 
+				 
+Deployment Tools: See the docs for more info. It has an example of how to deploy a model in AzureML using Python API.
+                  Also you can deploy to custom targets.
+				  
+				  
+MLflow VizMod: The mlflow-vizmod project allows data scientists to be more productive with their visualizations. 
+               We treat visualizations as models - just like ML models - thus being able to use the same infrastructure as MLflow to track, create projects, 
+			   register, and deploy visualizations.
+			   pip install mlflow-vizmod
+			   
+			   
+			   
+			   
+			   
+			   
+			   
+			   
+			   
+			   
+
+
+
+----------------------------MLflow Model Registry-----------------------------------
+The MLflow Model Registry component is a centralized model store, set of APIs, and UI, to collaboratively manage the full 
+lifecycle of an MLflow Model. It provides model lineage (which MLflow experiment and run produced the model), model versioning, 
+stage transitions (for example from staging to production), and annotations.
+
+The Model Registry introduces a few concepts that describe and facilitate the full lifecycle of an MLflow Model.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+mlflow models serve -m C:/Pycharm_Projects/MLflow/mlruns/0/1bcec01277a44199b8de46524313325d/artifacts/model -p 1234
+
+
+
+C:/Pycharm_Projects/MLflow/winequality-red
+
+
+
+mlflow run -e HyperparamTuning --experiment-id 0 /hyperparam --no-conda
+
+
+
+mlflow run -e hyperopt --experiment-id 0 examples/hyperparam

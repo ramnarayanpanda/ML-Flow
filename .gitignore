@@ -127,3 +127,10 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+
+# ignoring env 
+env/
+
+# ignoring temp folder that we are creating 
+temp/

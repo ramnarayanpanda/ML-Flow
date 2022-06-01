@@ -134,3 +134,7 @@ env/
 
 # ignoring temp folder that we are creating 
 temp/
+
+
+# ignore mlruns folder
+mlruns/

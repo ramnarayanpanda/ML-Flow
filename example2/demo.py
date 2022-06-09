@@ -33,7 +33,7 @@ def main(alpha, l1_ratio):
     train_x = train.drop([TARGET], axis=1)
     test_x = test.drop([TARGET], axis=1)
     train_y = train[[TARGET]]
-    test_y = test[[TARGET]]
+    test_y = test[[TARGET]]    
     
     with mlflow.start_run():
 

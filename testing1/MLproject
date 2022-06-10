@@ -1,0 +1,25 @@
+name: multistep_example
+
+conda_env: conda.yaml
+
+entry_points:
+
+    main: 
+        parameters: 
+            param1: {type: int, default: 1}
+            param2: {type: int, default: 3}
+        command: "python main.py --param1 {param1} --param2 {param2}"
+
+    stage_01: 
+        parameters: 
+            param1: {type: int, default: 3}
+            param2: {type: int, default: 5}
+        command: "python stage_01.py --param1 {param1} --param2 {param2}"
+
+    stage_02: 
+        parameters: 
+            param1: {type: int, default: 5}
+            param2: {type: int, default: 7}
+        command: "python stage_02.py --param1 {param1} --param2 {param2}"
+
+    

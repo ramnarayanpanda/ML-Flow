@@ -1,0 +1,46 @@
+name: NLP_usecase_multistep_workflow
+
+conda_env: conda.yaml 
+
+
+# if there are parameters like here training, you can pass them while running mlflow run
+# like:  mlflow run . -P training=0 --no-conda  
+entry_points: 
+    main:
+        parameters: 
+            training: {type: int, default: 1} 
+        command: "python main.py --training {training}"
+
+    # we have created all these stages here, but mlflow does not run all these stages
+    # it will just run one stage i.e. main, the above one
+    # so we can do one hack, we will call these stages in main.py 
+    stage_01: 
+        parameters: 
+            config: {type: str, default: configs/config.yaml}
+            params: {type: str, default: params.yaml}
+        command: "python src/stage_01_get_data.py --config={config}"
+
+    stage_02: 
+        parameters: 
+            config: {type: str, default: configs/config.yaml}
+            params: {type: str, default: params.yaml}
+        command: "python src/stage_02_prepare.py --config={config} --params={params}"
+
+
+    stage_03: 
+        parameters: 
+            config: {type: str, default: configs/config.yaml}
+            params: {type: str, default: params.yaml}
+        command: "python src/stage_03_featurization.py --config={config} --params={params}"
+
+    stage_04: 
+        parameters: 
+            config: {type: str, default: configs/config.yaml}
+            params: {type: str, default: params.yaml}
+        command: "python src/stage_04_train.py --config={config} --params={params}"
+
+    stage_05: 
+        parameters: 
+            config: {type: str, default: configs/config.yaml}
+            params: {type: str, default: params.yaml}
+        command: "python src/stage_05_evaluate.py --config={config}"

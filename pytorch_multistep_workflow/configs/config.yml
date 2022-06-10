@@ -19,4 +19,3 @@ params:
   LOG_INTERVAL: 10
   DRY_RUN: False
   EPOCHS: 1
-

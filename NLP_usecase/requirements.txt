@@ -1,0 +1,11 @@
+mlflow
+tqdm 
+pandas 
+numpy 
+Scipy 
+pyyaml 
+scikit-learn 
+lxml 
+botocore
+### local packages 
+-e . # uncomment this to use setup.py
